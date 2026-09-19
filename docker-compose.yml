@@ -1,0 +1,27 @@
+version: '3.8'
+services:
+  db:
+    image: mysql:8.0
+    container_name: api3
+    environment:
+      MYSQL_ROOT_PASSWORD: 
+      MYSQL_DATABASE: api3
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+  
+  api:
+    build: .
+    container_name: api3_app
+    environment:
+      DB_HOST: db
+      DB_USER: root
+      DB_PASSWORD: 
+      DB_NAME: api3
+      JWT_SECRET: supersecreto_mepsi
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
