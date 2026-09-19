@@ -1,27 +1,62 @@
-version: '3.8'
+# =====================================================================
+# docker-compose.yml - Levanta la base de datos (MySQL) y la API (Node)
+#
+# Uso:
+#   docker compose up --build -d   -> construye y levanta todo
+#   docker compose logs -f api     -> ver los logs de la API
+#   docker compose down            -> detiene y elimina los contenedores
+#   docker compose down -v         -> ídem + borra la base de datos (vuelve
+#                                     a ejecutar init.sql en el próximo up)
+# =====================================================================
 services:
+  # ---------------------------------------------------------------
+  # Base de datos MySQL
+  # ---------------------------------------------------------------
   db:
     image: mysql:8.0
     container_name: api3
+    restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: 
+      # Root sin contraseña (solo para desarrollo/local).
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
       MYSQL_DATABASE: api3
     ports:
       - "3306:3306"
     volumes:
+      # Script inicial: crea tablas y datos. Se ejecuta solo en el primer arranque.
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      # Volumen con nombre: los datos sobreviven a "docker compose down".
       - db_data:/var/lib/mysql
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-  
+    # El contenedor se considera "healthy" cuando MySQL ya acepta conexiones
+    # por TCP. Durante la primera inicialización (mientras corre init.sql)
+    # MySQL solo escucha por socket local, así que el ping por TCP falla
+    # hasta que termina de prepararse. Esto evita que la API arranque antes.
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  # ---------------------------------------------------------------
+  # API (Node.js + Express) - se construye con el Dockerfile local
+  # ---------------------------------------------------------------
   api:
     build: .
     container_name: api3_app
+    restart: unless-stopped
     environment:
-      DB_HOST: db
+      DB_HOST: db # nombre del servicio de MySQL (DNS interno de Docker)
       DB_USER: root
-      DB_PASSWORD: 
+      DB_PASSWORD: ""
       DB_NAME: api3
       JWT_SECRET: supersecreto_mepsi
     ports:
-      - "3000:3000"
+      - "3000:3000" # Postman -> http://localhost:3000/api
     depends_on:
-      - db
+      db:
+        # Espera a que MySQL esté "healthy", no solo iniciado.
+        condition: service_healthy
+
+volumes:
+  db_data:

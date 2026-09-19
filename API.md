@@ -14,6 +14,36 @@ npm install
 npm run dev
 ```
 
+## Ejecución con Docker (recomendado)
+
+Levanta MySQL y la API juntos, sin instalar nada más que Docker Desktop:
+
+```bash
+docker compose up --build -d   # construir y levantar
+docker compose logs -f api     # ver logs de la API
+docker compose down            # detener
+docker compose down -v         # detener y borrar la base (vuelve a ejecutar init.sql)
+```
+
+- La API queda en `http://localhost:3000/api` (base URL para Postman) y MySQL en `localhost:3306`.
+- La API espera a que MySQL esté *healthy* antes de arrancar (`healthcheck` en `docker-compose.yml`).
+- `init.sql` crea las tablas y los datos iniciales **solo en el primer arranque** (cuando el volumen está vacío).
+
+### Usuarios sembrados
+
+Las contraseñas están guardadas encriptadas con bcrypt; para iniciar sesión se usa el texto plano:
+
+| Email | Contraseña | Rol | id_usuario |
+|-------|------------|-----|------------|
+| `juan.perez@email.com` | `admin123` | Administrador | 1 |
+| `maria.gomez@email.com` | `editor123` | Editor | 2 |
+| `carlos.lopez@email.com` | `usuario123` | Usuario | 3 |
+| `ana.martinez@email.com` | `moderador123` | Moderador | 4 |
+
+Las publicaciones sembradas ocupan los ids 1 a 4; las nuevas reciben el id 5 en adelante. Los usuarios registrados desde la API también empiezan en el id 5.
+
+> Nota: la RegEx de contraseñas solo se aplica al **registro**; por eso estas contraseñas sembradas (sin mayúscula) sirven para iniciar sesión aunque no cumplirían la regla si se registraran por la API.
+
 ## Pruebas unitarias (Jest)
 
 ```bash
@@ -54,7 +84,7 @@ Requisitos: mínimo 8 caracteres, al menos 1 mayúscula y al menos 1 número. Si
 | Método | Ruta                     | Protegida | Descripción |
 |--------|--------------------------|-----------|-------------|
 | GET    | `/api/publicaciones`     | No        | Lista publicaciones con paginación (`page`, `limit`) y búsqueda (`search`). |
-| POST   | `/api/publicaciones`     | Sí        | Crea una publicación. El `autor_id` se ignora si viene en el body: se inyecta desde `req.usuario.id`. |
+| POST   | `/api/publicaciones`     | Sí        | Crea una publicación. El `autor_id` se ignora si viene en el body: se inyecta desde `req.usuario.id`. Responde `201` con `{ message, id }` (el `id` generado). |
 | PUT    | `/api/publicaciones/:id` | Sí        | Actualiza una publicación. Sólo el dueño (`autor_id === req.usuario.id`) puede editarla; caso contrario `403 Forbidden`. |
 | DELETE | `/api/publicaciones/:id` | Sí        | Elimina una publicación. Misma verificación de propiedad que en `PUT`. |
 

@@ -26,8 +26,11 @@ const crearPost = async (req, res) => {
     // se extrae del usuario autenticado por el Token JWT.
     const autor_id = req.usuario.id;
 
-    await publicacionModel.crearPublicacion(titulo, contenido, autor_id);
-    res.status(201).json({ message: 'Publicación creada exitosamente' });
+    const resultado = await publicacionModel.crearPublicacion(titulo, contenido, autor_id);
+
+    // Se devuelve el id generado para que el cliente (ej. Postman) pueda
+    // referenciar la publicación en las llamadas PUT/DELETE siguientes.
+    res.status(201).json({ message: 'Publicación creada exitosamente', id: resultado.insertId });
   } catch (error) {
     console.error('Error al crear publicación: ', error);
     res.status(500).json({ error: 'Error interno del servidor' });

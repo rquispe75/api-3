@@ -16,5 +16,6 @@ COPY . .
 # Exponemos el puerto en el que la aplicación escuchará
 EXPOSE 3000
 
-# Comando para ejecutar la aplicación
+# Comando para ejecutar la aplicación.
+# "npm start" ejecuta el script "start" de package.json ("node index.js").
 CMD ["npm", "start"]
